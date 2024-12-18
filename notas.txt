@@ -1,0 +1,15 @@
+pagos realizados por cualquier cliente 
+SELECT `id`, `cliente_id`, `nombre`, `cuota`, `saldo`, `estado`, `fecha_pago` 
+FROM `pagos` AS `Pago` WHERE `Pago`.`cliente_id` = '4';
+
+
+consulta para sacar  el total pagado en cualquier dia
+SELECT SUM(cuota) AS totalPorDia
+FROM pagos
+WHERE fecha_pago = '2024-10-20';
+
+
+
+pagos atrasados
+SELECT `id`, `cliente_id`, `nombre`, `cuota`, `saldo`, `estado`, `fecha_pago` 
+FROM `pagos` AS `Pago` WHERE `Pago`.`estado` = 'retrasado';

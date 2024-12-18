@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Pagos - Filtro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+  <!-- Contenedor Principal -->
+  <div class="max-w-6xl mx-auto p-6 bg-white shadow-md rounded-lg mt-10">
+
+    <h1 class="text-3xl font-semibold text-center text-gray-800 mb-6">Lista de Pagos</h1>
+
+    <!-- Barra de Filtro -->
+    <div class="mb-4">
+      <input id="searchInput" type="text" class="px-4 py-2 w-full text-gray-700 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Filtrar por cliente o estado...">
+    </div>
+
+    <!-- Tabla de Pagos -->
+    <div class="overflow-x-auto overflow-y-auto max-h-96">
+      <table class="min-w-full table-auto bg-white rounded-lg shadow-lg">
+        <thead class="bg-gray-800 text-white">
+          <tr>
+            <th class="px-4 py-3 text-left">#</th>
+            <th class="px-4 py-3 text-left">Cliente</th>
+            <th class="px-4 py-3 text-left">Monto</th>
+            <th class="px-4 py-3 text-left">Estado</th>
+            <th class="px-4 py-3 text-left">Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Las filas de la tabla se llenarán dinámicamente -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Script para cargar los pagos desde la API y filtrar -->
+  <script>
+    // URL de la API que proporciona los pagos (ajústalo según tu servidor)
+    const apiUrl = 'http://localhost:3000/api/pagos'; // Cambia esto a la URL correcta de tu API
+
+    // Variable global para almacenar los pagos completos
+    let pagos = [];
+
+    // Función para cargar los pagos desde la API
+    async function cargarPagos() {
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        if (response.ok) {
+          pagos = data; // Guardamos los pagos completos en la variable global
+          mostrarTabla(pagos);  // Mostrar los pagos en la tabla
+        } else {
+          console.error('Error al obtener los pagos:', data);
+        }
+      } catch (error) {
+        console.error('Error de red:', error);
+      }
+    }
+
+    // Función para mostrar los pagos en la tabla
+    function mostrarTabla(pagosFiltrados) {
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = ''; // Limpiar la tabla antes de agregar nuevas filas
+
+      pagosFiltrados.forEach((pago, index) => {
+        const tr = document.createElement('tr');
+        tr.classList.add('border-b', 'hover:bg-gray-50');
+
+        tr.innerHTML = `
+          <td class="px-4 py-2">${pago.id}</td>
+          <td class="px-4 py-2">${pago.nombre}</td>
+          <td class="px-4 py-2">${pago.cuota}</td>
+          <td class="px-4 py-2 ${getEstadoClase(pago.estado)}">${pago.estado}</td>
+          <td class="px-4 py-2">${pago.fecha_pago}</td>
+        `;
+
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // Función para obtener la clase del estado
+    function getEstadoClase(estado) {
+      if (estado === 'a tiempo') {
+        return 'text-green-600';
+      } else if (estado === 'retrasado') {
+        return 'text-red-600';
+      } else if (estado === 'Pendiente') {
+        return 'text-yellow-500';
+      }
+      return '';
+    }
+
+    // Filtro de búsqueda
+    document.getElementById('searchInput').addEventListener('input', function (e) {
+      const query = e.target.value.toLowerCase();
+      // Filtrar los pagos con base en el nombre del cliente o el estado
+      const pagosFiltrados = pagos.filter(pago => 
+        pago.nombre.toLowerCase().includes(query) || 
+        pago.estado.toLowerCase().includes(query)
+      );
+      mostrarTabla(pagosFiltrados);  // Mostrar los pagos filtrados
+    });
+
+    // Cargar los pagos cuando la página cargue
+    window.onload = cargarPagos;
+  </script>
+
+</body>
+</html>

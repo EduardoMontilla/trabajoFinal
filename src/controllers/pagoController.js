@@ -1,6 +1,7 @@
 const Pago = require('../models/pagoModel');
 
 
+
 // Crear un nuevo pago
 exports.crearPago = async (req, res) => {
     try {
@@ -86,49 +87,61 @@ exports.obtenerTotalPagos = async (req, res) => {
     }
 };
 
+//total en cartera 
+// exports.calcularTotalCartera = async (req, res) => {
+//     try {
+//         const { totalCartera, detalle } = await obtenerTotalCartera();
+//         res.status(200).json({ totalCartera, detalle });
+//     } catch (error) {
+//         console.error('Error al calcular el total en cartera:', error);
+//         res.status(500).json({ message: 'Error al calcular el total en cartera', error });
+//     }
+// };
+
 // Obtener pagos por cliente
 exports.obtenerPagosPorCliente = async (req, res) => {
-    const { clienteId } = req.params;
+    const { clienteId } = req.params; // Extrae el clienteId de los parámetros
+    console.log('Cliente ID recibido en el controlador:', clienteId);
 
     try {
-        const pagos = await Pago.findAll({
-            where: { cliente_id: clienteId }
-        });
+        const pagos = await Pago.obtenerPagosPorCliente(clienteId);
 
         if (!pagos.length) {
             return res.status(404).json({ message: 'No se encontraron pagos para este cliente' });
         }
-
         res.status(200).json(pagos);
     } catch (error) {
+        console.error('Error al obtener los pagos:', error);
         res.status(500).json({ message: 'Error al obtener los pagos del cliente', error });
     }
 };
 
 // Obtener total pagado en un día específico
 exports.obtenerTotalPagadoPorDia = async (req, res) => {
-    const { fecha } = req.params;
+    const { fecha } = req.params; // Recibe la fecha desde la URL
+    console.log('Fecha recibida:', fecha);
 
     try {
-        const totalPorDia = await Pago.sum('cuota', {
-            where: { fecha_pago: fecha }
-        });
+        // Llama a la función del modelo
+        const totalPorDia = await Pago.obtenerTotalPagadoPorDia(fecha);
 
         if (totalPorDia === null) {
             return res.status(404).json({ message: 'No se encontraron pagos en esta fecha' });
         }
-
         res.status(200).json({ totalPorDia });
-    } catch (error) {
+    }
+     catch (error) {
         res.status(500).json({ message: 'Error al obtener el total pagado en esta fecha', error });
     }
+
 };
+
 
 // Obtener pagos atrasados
 exports.obtenerPagosAtrasados = async (req, res) => {
     try {
-        const pagosAtrasados = await Pago.findAll({
-            where: { estado: 'Atrasado' }
+        const pagosAtrasados = await Pago.obtenerPagosAtrasados({
+            where: { estado: 'retrasado' }
         });
 
         if (!pagosAtrasados.length) {
@@ -144,26 +157,49 @@ exports.obtenerPagosAtrasados = async (req, res) => {
 // Obtener cliente más cumplido e incumplido
 exports.obtenerClientesCumplimiento = async (req, res) => {
     try {
-        const clientesPagos = await Pago.findAll({
-            attributes: ['cliente_id', 'estado'],
-            raw: true,
-        });
+        // Obtener los pagos de los clientes
+        const clientesPagos = await Pago.obtenerClientesCumplimiento();
+        console.log('Clientes Pagos:', clientesPagos); // Log para revisar los datos obtenidos
 
-        // Procesar datos para calcular cumplimiento
+        // Verificar si los datos están presentes
+        if (!Array.isArray(clientesPagos) || clientesPagos.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron pagos de clientes.' });
+        }
+
         const cumplimiento = {};
+
+        // Procesar los pagos y contar los diferentes estados
         clientesPagos.forEach((pago) => {
             const { cliente_id, estado } = pago;
+
             if (!cumplimiento[cliente_id]) {
-                cumplimiento[cliente_id] = { cumplido: 0, incumplido: 0 };
+                cumplimiento[cliente_id] = {
+                    cumplido: 0,
+                    incumplido: 0,
+                    estados: {
+                        'a tiempo': 0,
+                        'retrasado': 0,
+                        'anticipado': 0,
+                        'pendiente': 0
+                    },
+                    nombre: pago.nombre_cliente  // Asumiendo que el nombre del cliente está en la columna `nombre_cliente` de la tabla `Pago`
+                };
             }
-            if (estado === 'Pagado') {
+
+            // Actualizar el conteo de los estados
+            if (estado === 'a tiempo' || estado === 'anticipado') {
                 cumplimiento[cliente_id].cumplido++;
-            } else {
+            } else if (estado === 'retrasado' || estado === 'pendiente') {
                 cumplimiento[cliente_id].incumplido++;
+            }
+
+            // Contar cada estado específico
+            if (cumplimiento[cliente_id].estados[estado] !== undefined) {
+                cumplimiento[cliente_id].estados[estado]++;
             }
         });
 
-        // Identificar más cumplido e incumplido
+        // Identificar el cliente más cumplido e incumplido
         let clienteMasCumplido = null;
         let clienteMasIncumplido = null;
         let maxCumplido = -Infinity;
@@ -181,11 +217,34 @@ exports.obtenerClientesCumplimiento = async (req, res) => {
             }
         }
 
-        res.status(200).json({
-            clienteMasCumplido,
-            clienteMasIncumplido,
-        });
+        // Resumen solo para el más cumplido y más incumplido
+        const resumenClientes = {
+            clienteMasCumplido: {
+                cliente_id: clienteMasCumplido,
+                nombre: cumplimiento[clienteMasCumplido] ? cumplimiento[clienteMasCumplido].nombre : 'No disponible',
+                cumplido: cumplimiento[clienteMasCumplido].cumplido,
+                incumplido: cumplimiento[clienteMasCumplido].incumplido,
+                estados: cumplimiento[clienteMasCumplido].estados
+            },
+            clienteMasIncumplido: {
+                cliente_id: clienteMasIncumplido,
+                nombre: cumplimiento[clienteMasIncumplido] ? cumplimiento[clienteMasIncumplido].nombre : 'No disponible',
+                cumplido: cumplimiento[clienteMasIncumplido].cumplido,
+                incumplido: cumplimiento[clienteMasIncumplido].incumplido,
+                estados: cumplimiento[clienteMasIncumplido].estados
+            }
+        };
+
+        res.status(200).json(resumenClientes);
+
     } catch (error) {
-        res.status(500).json({ message: 'Error al obtener los clientes más cumplidos e incumplidos', error });
+        console.error('Error al obtener los clientes más cumplidos e incumplidos:', error);
+        res.status(500).json({ message: 'Error al obtener los clientes más cumplidos e incumplidos', error: error.message });
     }
 };
+
+
+
+
+
+

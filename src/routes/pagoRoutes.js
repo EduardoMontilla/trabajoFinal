@@ -10,7 +10,7 @@ router.post('/', pagoController.crearPago);
 router.get('/', pagoController.obtenerPagos);
 
 // Ruta para obtener un pago por su ID
-// router.get('/:id', pagoController.obtenerPagoPorId);
+router.get('/id/:id', pagoController.obtenerPagoPorId);
 
 // Ruta para actualizar un pago por su ID
 // router.put('/:id', pagoController.actualizarPago);
@@ -19,16 +19,18 @@ router.get('/', pagoController.obtenerPagos);
 // router.delete('/:id', pagoController.eliminarPago);
 
 // Ruta para obtener el total de pagos realizados
-router.get('/totales', pagoController.obtenerTotalPagos);
+router.get('/total', pagoController.obtenerTotalPagos);
+
+// router.get('/total/cartera',pagoController.obtenerTotalCartera);
 
 // Ruta para obtener los pagos realizados por un cliente específico
 router.get('/cliente/:clienteId', pagoController.obtenerPagosPorCliente);
 
 // Ruta para obtener el total pagado en un día específico
-router.get('/total/:fecha', pagoController.obtenerTotalPagadoPorDia);
+router.get('/totalDia/:fecha', pagoController.obtenerTotalPagadoPorDia);
 
 // Ruta para obtener los pagos atrasados
-router.get('/atrasados', pagoController.obtenerPagosAtrasados);
+router.get('/retrasados', pagoController.obtenerPagosAtrasados);
 
 // Ruta para obtener el cliente más cumplido y el más incumplido
 router.get('/cumplimiento', pagoController.obtenerClientesCumplimiento);

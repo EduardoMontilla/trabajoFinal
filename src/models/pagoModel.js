@@ -1,4 +1,8 @@
 const Pago = require('./Pago');
+// const db = require('../config/db');
+
+
+
 // Crear un nuevo pago
 exports.crearPago = async (datos) => {
     const nuevoPago = await Pago.create(datos);
@@ -42,22 +46,60 @@ exports.eliminarPago = async (id) => {
 
 // Obtener total de pagos realizados
 exports.obtenerTotalPagos = async () => {
-    const totalPagos = await Pago.count(); // Suma todas las cuotas de la tabla
+    const totalPagos = await Pago.count(); 
     return totalPagos;
 };
 
+//total en cartera
+// exports.obtenerTotalCartera = async () => {
+//     try {
+//         const [resultados] = await db.query(`
+//             SELECT cliente_id, 
+//                    MAX(fecha_pago) AS fecha_reciente, 
+//                    saldo 
+//             FROM pagos 
+//             GROUP BY cliente_id
+//         `);
+
+//         // Calcular el total sumando los saldos recientes
+//         const totalCartera = resultados.reduce((total, cliente) => {
+//             return total + parseFloat(cliente.saldo || 0);
+//         }, 0);
+
+//         return { totalCartera, detalle: resultados };
+//     } catch (error) {
+//         console.error('Error al calcular el total en cartera:', error);
+//         throw new Error('Error al calcular el total en cartera');
+//     }
+// };
+
+
 // Obtener pagos por cliente
 exports.obtenerPagosPorCliente = async (clienteId) => {
+    console.log('Cliente ID recibido:', clienteId, 'Tipo:', typeof clienteId);
+    let id;
+    if (typeof clienteId === 'object' && clienteId !== null) {
+        id = clienteId.where?.cliente_id || clienteId.cliente_id || null;
+    } else {
+        id = clienteId;
+    }
+    if (!id || (typeof id !== 'string' && typeof id !== 'number')) {
+        console.error('Error: clienteId no es válido:', id);
+        throw new Error('El clienteId debe ser un número o string válido');
+    }
     const pagos = await Pago.findAll({
-        where: { cliente_id: clienteId }, // Filtra por el ID del cliente
+        where: { cliente_id: id },
     });
     return pagos;
 };
 
 // Obtener el total pagado en un día específico
 exports.obtenerTotalPagadoPorDia = async (fecha) => {
+    console.log('esta es la fecha que llega al modelo',fecha)
     const totalPorDia = await Pago.sum('cuota', {
-        where: { fecha_pago: fecha },
+        where: {
+            fecha_pago: fecha // Asegúrate de que 'fecha_pago' es el campo correcto
+        }
     });
     return totalPorDia;
 };
@@ -65,52 +107,23 @@ exports.obtenerTotalPagadoPorDia = async (fecha) => {
 // Obtener pagos atrasados
 exports.obtenerPagosAtrasados = async () => {
     const pagosAtrasados = await Pago.findAll({
-        where: { estado: 'Atrasado' }, // Filtra por el estado 'Atrasado'
+        where: { estado: 'retrasado' }, // Filtra por el estado 'Atrasado'
     });
     return pagosAtrasados;
 };
 
 // Obtener cliente más cumplido e incumplido
+// En el modelo Pago
 exports.obtenerClientesCumplimiento = async () => {
-    const clientesPagos = await Pago.findAll({
-        attributes: ['cliente_id', 'estado'],
-        raw: true,
-    });
-
-    // Procesar datos para calcular cumplimiento
-    const cumplimiento = {};
-    clientesPagos.forEach((pago) => {
-        const { cliente_id, estado } = pago;
-        if (!cumplimiento[cliente_id]) {
-            cumplimiento[cliente_id] = { cumplido: 0, incumplido: 0 };
-        }
-        if (estado === 'Pagado') {
-            cumplimiento[cliente_id].cumplido++;
-        } else {
-            cumplimiento[cliente_id].incumplido++;
-        }
-    });
-
-    // Identificar más cumplido e incumplido
-    let clienteMasCumplido = null;
-    let clienteMasIncumplido = null;
-    let maxCumplido = -Infinity;
-    let maxIncumplido = -Infinity;
-
-    for (const clienteId in cumplimiento) {
-        const { cumplido, incumplido } = cumplimiento[clienteId];
-        if (cumplido > maxCumplido) {
-            maxCumplido = cumplido;
-            clienteMasCumplido = clienteId;
-        }
-        if (incumplido > maxIncumplido) {
-            maxIncumplido = incumplido;
-            clienteMasIncumplido = clienteId;
-        }
+    try {
+        // Obtener los pagos de clientes
+        return await Pago.findAll({
+            attributes: ['cliente_id', 'estado'],
+            raw: true, // Esto hace que se obtengan los resultados como un arreglo de objetos simples
+        });
+    } catch (error) {
+        console.error('Error al obtener los pagos de los clientes:', error);
+        throw error;
     }
-
-    return {
-        clienteMasCumplido,
-        clienteMasIncumplido,
-    };
 };
+

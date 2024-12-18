@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD Clientes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto py-10">
+        <h1 class="text-3xl font-bold text-center mb-10">CRUD de Clientes</h1>
+
+        <!-- Formulario para Crear o Actualizar Clientes -->
+        <div class="bg-white p-6 rounded shadow-md mb-8 max-w-md mx-auto">
+            <h2 class="text-2xl font-semibold mb-4">Agregar/Actualizar Cliente</h2>
+            <form id="clienteForm">
+                <input type="hidden" id="clienteId">
+                <div class="mb-4">
+                    <label for="nombre" class="block text-sm font-medium text-gray-700">Nombre</label>
+                    <input type="text" id="nombre" class="w-full mt-1 p-2 border rounded">
+                </div>
+                <div class="mb-4">
+                    <label for="identificacion" class="block text-sm font-medium text-gray-700">Identificación</label>
+                    <input type="text" id="identificacion" class="w-full mt-1 p-2 border rounded">
+                </div>
+                <div class="mb-4">
+                    <label for="correo" class="block text-sm font-medium text-gray-700">Correo</label>
+                    <input type="email" id="correo" class="w-full mt-1 p-2 border rounded">
+                </div>
+                <div class="mb-4">
+                    <label for="puntaje" class="block text-sm font-medium text-gray-700">Puntaje</label>
+                    <input type="number" id="puntaje" class="w-full mt-1 p-2 border rounded">
+                </div>
+                <div class="mb-4">
+                    <label for="fecha_ultima_consulta" class="block text-sm font-medium text-gray-700">Fecha Última
+                        Consulta</label>
+                    <input type="date" id="fecha_ultima_consulta" class="w-full mt-1 p-2 border rounded">
+                </div>
+                <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                    Guardar Cliente
+                </button>
+                <button id="salirButton" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">
+                    Salir
+                </button>
+            </form>
+        </div>
+
+        <!-- Tabla de Clientes -->
+        <div class="bg-white p-6 rounded shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Lista de Clientes</h2>
+            <table class="table-auto w-full">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="px-4 py-2">ID</th>
+                        <th class="px-4 py-2">Nombre</th>
+                        <th class="px-4 py-2">Identificación</th>
+                        <th class="px-4 py-2">Correo</th>
+                        <th class="px-4 py-2">Puntaje</th>
+                        <th class="px-4 py-2">Última Consulta</th>
+                        <th class="px-4 py-2">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="clientesTable">
+                    <!-- Contenido dinámico generado por JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+            
+        const API_URL = 'http://localhost:3000/api/clientes';
+        const token = localStorage.getItem('token'); // Obtener el token JWT desde el almacenamiento local
+
+        // Verificar si el token está presente
+        if (!token) {
+            alert("Acceso denegado: No se ha iniciado sesión.");
+            window.location.href = 'login.html'; // Redirigir al login si no hay token            
+        }
+
+        // Obtener elementos del DOM
+        const clienteForm = document.getElementById('clienteForm');
+        const clientesTable = document.getElementById('clientesTable');
+        const clienteId = document.getElementById('clienteId');
+        const nombre = document.getElementById('nombre');
+        const identificacion = document.getElementById('identificacion');
+        const correo = document.getElementById('correo');
+        const puntaje = document.getElementById('puntaje');
+        const fecha_ultima_consulta = document.getElementById('fecha_ultima_consulta');
+
+        // Función para obtener los clientes
+        async function obtenerClientes() {
+            const response = await fetch(API_URL, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Enviar el token en la cabecera
+                }
+            });
+
+            if (response.status === 403 || response.status === 401) {
+                alert('Acceso denegado: Token inválido o expirado.');
+                window.location.href = 'login.html'; // Redirigir al login si el token no es válido
+                return;
+            }
+
+            const clientes = await response.json();
+            clientesTable.innerHTML = clientes.map(cliente => `
+                <tr class="border-t">
+                    <td class="px-4 py-2">${cliente.id}</td>
+                    <td class="px-4 py-2">${cliente.nombre}</td>
+                    <td class="px-4 py-2">${cliente.identificacion}</td>
+                    <td class="px-4 py-2">${cliente.correo}</td>
+                    <td class="px-4 py-2">${cliente.puntaje}</td>
+                    <td class="px-4 py-2">${new Date(cliente.fecha_ultima_consulta).toLocaleDateString()}</td>
+                    <td class="px-4 py-2">
+                        <button onclick="editarCliente(${cliente.id})" class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+                        <button onclick="eliminarCliente(${cliente.id})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Eliminar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Crear o actualizar cliente
+        clienteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const metodo = clienteId.value ? 'PUT' : 'POST';
+            const url = clienteId.value ? `${API_URL}/${clienteId.value}` : API_URL;
+            const cliente = {
+                nombre: nombre.value,
+                identificacion: identificacion.value,
+                correo: correo.value,
+                puntaje: puntaje.value,
+                fecha_ultima_consulta: fecha_ultima_consulta.value,
+            };
+
+            const response = await fetch(url, {
+                method: metodo,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Incluir el token en la cabecera
+                },
+                body: JSON.stringify(cliente),
+            });
+
+            if (response.status === 403 || response.status === 401) {
+                alert('Acceso denegado: Token inválido o expirado.');
+                window.location.href = 'login.html'; // Redirigir al login si el token no es válido
+            }
+
+            clienteForm.reset();
+            obtenerClientes();
+        });
+
+        // Cargar los datos del cliente para editar
+        async function editarCliente(id) {
+            const response = await fetch(`${API_URL}/${id}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Incluir el token en la cabecera
+                }
+            });
+
+            if (response.status === 403 || response.status === 401) {
+                alert('Acceso denegado: Token inválido o expirado.');
+                window.location.href = 'login.html'; // Redirigir al login si el token no es válido
+                return;
+            }
+
+            const cliente = await response.json();
+            clienteId.value = cliente.id;
+            nombre.value = cliente.nombre;
+            identificacion.value = cliente.identificacion;
+            correo.value = cliente.correo;
+            puntaje.value = cliente.puntaje;
+            fecha_ultima_consulta.value = cliente.fecha_ultima_consulta.split('T')[0];
+        }
+
+        // Eliminar cliente
+        async function eliminarCliente(id) {
+            const response = await fetch(`${API_URL}/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // Incluir el token en la cabecera
+                }
+            });
+
+            if (response.status === 403 || response.status === 401) {
+                alert('Acceso denegado: Token inválido o expirado.');
+                window.location.href = 'login.html'; // Redirigir al login si el token no es válido
+                return;
+            }
+
+            obtenerClientes();
+        }
+
+        const salirButton = document.getElementById('salirButton');
+        salirButton.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        });
+
+        // Cargar los clientes al cargar la página
+        obtenerClientes();
+    </script>
+</body>
+
+</html>
