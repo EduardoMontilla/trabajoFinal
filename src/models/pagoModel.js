@@ -1,7 +1,13 @@
 const Pago = require('./Pago');
 // const db = require('../config/db');
+const sequelize = require('../config/db');
 
-
+const clientes = {
+    1: "Juan Pérez",
+    2: "Ana López",
+    3: "Carlos Ruiz",
+    4: "María Gómez"
+};
 
 // Crear un nuevo pago
 exports.crearPago = async (datos) => {
@@ -46,7 +52,7 @@ exports.eliminarPago = async (id) => {
 
 // Obtener total de pagos realizados
 exports.obtenerTotalPagos = async () => {
-    const totalPagos = await Pago.count(); 
+    const totalPagos = await Pago.count();
     return totalPagos;
 };
 
@@ -95,7 +101,7 @@ exports.obtenerPagosPorCliente = async (clienteId) => {
 
 // Obtener el total pagado en un día específico
 exports.obtenerTotalPagadoPorDia = async (fecha) => {
-    console.log('esta es la fecha que llega al modelo',fecha)
+    console.log('esta es la fecha que llega al modelo', fecha)
     const totalPorDia = await Pago.sum('cuota', {
         where: {
             fecha_pago: fecha // Asegúrate de que 'fecha_pago' es el campo correcto
@@ -117,13 +123,37 @@ exports.obtenerPagosAtrasados = async () => {
 exports.obtenerClientesCumplimiento = async () => {
     try {
         // Obtener los pagos de clientes
+        // const cliente = await Cliente.findOne({
+        //     where: {
+        //         cliente_id: cliente_id
+        //     }
+        // }); 
         return await Pago.findAll({
-            attributes: ['cliente_id', 'estado'],
+            attributes: ['cliente_id', 'estado','nombre'],
             raw: true, // Esto hace que se obtengan los resultados como un arreglo de objetos simples
         });
     } catch (error) {
         console.error('Error al obtener los pagos de los clientes:', error);
         throw error;
     }
+};
+
+exports.obtenerCartera = async () => {
+    try {
+        const rta = await sequelize.query(`SELECT DISTINCT p1.cliente_id, p1.nombre, p1.saldo, p1.fecha_pago
+        FROM pagos p1
+        WHERE p1.fecha_pago = (
+        SELECT MAX(p2.fecha_pago)
+        FROM pagos p2
+        WHERE p2.cliente_id = p1.cliente_id
+    )`);
+        return rta[0];
+    } catch (error) {
+        console.log(error);
+        throw new Error(error);
+    }
+    //const [rows] = await db.query(`SELECT p1.cliente_id, p1.nombre, p1.saldo,
+    //   p1.fecha_pago FROM pagos p1 WHERE p1.fecha_pago in ( SELECT max(p2.fecha_pago) 
+    // FROM pagos p2 where p2.cliente_id = p1.cliente_id )`);
 };
 

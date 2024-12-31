@@ -35,4 +35,7 @@ router.get('/retrasados', pagoController.obtenerPagosAtrasados);
 // Ruta para obtener el cliente más cumplido y el más incumplido
 router.get('/cumplimiento', pagoController.obtenerClientesCumplimiento);
 
+// Ruta para obtener la cartera total
+router.get('/cartera', pagoController.obtenerCartera);
+
 module.exports = router;

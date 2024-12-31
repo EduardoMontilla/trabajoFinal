@@ -170,19 +170,20 @@ exports.obtenerClientesCumplimiento = async (req, res) => {
 
         // Procesar los pagos y contar los diferentes estados
         clientesPagos.forEach((pago) => {
-            const { cliente_id, estado } = pago;
+            const { cliente_id, estado,nombre } = pago;
 
             if (!cumplimiento[cliente_id]) {
                 cumplimiento[cliente_id] = {
                     cumplido: 0,
                     incumplido: 0,
+                    nombre,
                     estados: {
                         'a tiempo': 0,
                         'retrasado': 0,
                         'anticipado': 0,
                         'pendiente': 0
                     },
-                    nombre: pago.nombre_cliente  // Asumiendo que el nombre del cliente está en la columna `nombre_cliente` de la tabla `Pago`
+                    // nombre: pago.nombre_cliente  // Asumiendo que el nombre del cliente está en la columna `nombre_cliente` de la tabla `Pago`
                 };
             }
 
@@ -242,6 +243,22 @@ exports.obtenerClientesCumplimiento = async (req, res) => {
         res.status(500).json({ message: 'Error al obtener los clientes más cumplidos e incumplidos', error: error.message });
     }
 };
+
+exports.obtenerCartera = async (req, res) => {
+    try {
+        const pagos = await Pago.obtenerCartera();
+        let total=0;
+        pagos.forEach(element => {
+            total += parseInt(element.saldo);
+        });
+        console.log(pagos);
+        res.status(200).json(parseInt(total));
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener la cartera', error });
+    }
+};
+
+
 
 
 

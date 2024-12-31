@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Clientes Cumplimiento</title>
+</head>
+<body class="bg-gray-100 p-6">
+  <div id="app" class="max-w-2xl mx-auto">
+    <!-- Cliente Más Cumplido -->
+    <div class="bg-gray-50 border-l-4 border-green-500 shadow-sm p-4 flex items-center rounded-lg cursor-pointer" onclick="openModal('cumplido')">
+      <div class="text-green-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-gray-600">Cliente más cumplido</h3>
+        <p id="clienteCumplidoNombre" class="text-xl font-bold text-gray-900">Cargando...</p>
+      </div>
+    </div>
+
+    <!-- Cliente Más Incumplido -->
+    <div class="bg-gray-50 border-l-4 border-red-500 shadow-sm p-4 flex items-center rounded-lg mt-4 cursor-pointer" onclick="openModal('incumplido')">
+      <div class="text-red-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-6.364 6.364m0 0l-6.364 6.364M12 12h8M6 6h.01" />
+        </svg>
+      </div>
+      <div class="ml-3">
+        <h3 class="text-sm font-medium text-gray-600">Cliente más incumplido</h3>
+        <p id="clienteIncumplidoNombre" class="text-xl font-bold text-gray-900">Cargando...</p>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+      <div class="bg-white p-6 rounded-lg shadow-lg w-80">
+        <h3 id="modalTitle" class="text-lg font-bold text-gray-800">Detalles del Cliente</h3>
+        <p id="modalContent" class="mt-4 text-gray-600">Cargando...</p>
+        <button class="mt-6 w-full bg-blue-500 text-white py-2 rounded-lg" onclick="closeModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/api/pagos/cumplimiento';
+
+    // Fetch data from the API
+    async function fetchData() {
+      try {
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        document.getElementById('clienteCumplidoNombre').textContent = data.clienteMasCumplido.nombre;
+        document.getElementById('clienteIncumplidoNombre').textContent = data.clienteMasIncumplido.nombre;
+
+        window.clientes = data; // Store data globally for modal use
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+
+    // Open modal and populate data
+    function openModal(type) {
+      const modal = document.getElementById('modal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalContent = document.getElementById('modalContent');
+
+      if (type === 'cumplido') {
+        modalTitle.textContent = 'Cliente Más Cumplido';
+        modalContent.innerHTML = `
+          <p><strong>Nombre:</strong> ${window.clientes.clienteMasCumplido.nombre}</p>
+          <p><strong>Cumplido:</strong> ${window.clientes.clienteMasCumplido.cumplido}</p>
+          <p><strong>Incumplido:</strong> ${window.clientes.clienteMasCumplido.incumplido}</p>
+        `;
+      } else if (type === 'incumplido') {
+        modalTitle.textContent = 'Cliente Más Incumplido';
+        modalContent.innerHTML = `
+          <p><strong>Nombre:</strong> ${window.clientes.clienteMasIncumplido.nombre}</p>
+          <p><strong>Cumplido:</strong> ${window.clientes.clienteMasIncumplido.cumplido}</p>
+          <p><strong>Incumplido:</strong> ${window.clientes.clienteMasIncumplido.incumplido}</p>
+        `;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    // Close modal
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.classList.add('hidden');
+    }
+
+    // Initialize
+    fetchData();
+  </script>
+</body>
+</html>
